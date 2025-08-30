@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionnaire de Tâches</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Gestionnaire de Tâches</h1>
+            <div class="controls">
+                <button id="view-toggle" class="toggle-btn">Mode Tableau</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Formulaire d'ajout -->
+            <div class="add-task-form">
+                <input type="text" id="task-title" placeholder="Titre de la tâche..." maxlength="120" aria-label="Titre de la tâche">
+                <textarea id="task-desc" placeholder="Description (optionnelle)" rows="2" maxlength="500" aria-label="Description de la tâche"></textarea>
+                <button id="add-task-btn" type="button" title="Ajouter la tâche" aria-label="Ajouter la tâche" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Ajouter</span>
+                </button>
+            </div>
+
+            <!-- Mode Colonnes -->
+            <div id="columns-view" class="columns-view">
+                <div class="categories">
+                    <div class="category" data-category="a-lancer">
+                        <h2>À lancer</h2>
+                        <div class="tasks-container" id="tasks-a-lancer"></div>
+                    </div>
+                    <div class="category" data-category="en-cours">
+                        <h2>En cours</h2>
+                        <div class="tasks-container" id="tasks-en-cours"></div>
+                    </div>
+                    <div class="category" data-category="a-finir">
+                        <h2>À finir</h2>
+                        <div class="tasks-container" id="tasks-a-finir"></div>
+                    </div>
+                    <div class="category" data-category="complet">
+                        <h2>Complet</h2>
+                        <div class="tasks-container" id="tasks-complet"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode Tableau -->
+            <div id="table-view" class="table-view hidden">
+                <div class="table-controls">
+                    <button id="sort-date-btn">Trier par Date</button>
+                    <button id="sort-name-btn">Trier par Nom</button>
+                </div>
+                <table class="tasks-table">
+                    <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Description</th>
+                            <th>Catégorie</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
