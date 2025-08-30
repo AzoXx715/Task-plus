@@ -4,7 +4,11 @@ class TaskManager {
         this.currentView = localStorage.getItem('currentView') || 'columns';
         this.sortBy = 'category'; // category, date, name
         this.sortOrder = 'asc';
+        this.editingTaskId = null;
+        this.priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
         this.migrateTasks();
+        this.contextTaskId = null;
+        this.pendingDeleteId = null;
         
         this.init();
     }
@@ -12,25 +16,138 @@ class TaskManager {
     init() {
         this.setupEventListeners();
         this.setupDragAndDrop();
+        this.setupModal();
+        this.setupContextMenu();
+        this.setupConfirmModal();
         this.renderTasks();
         this.setView(this.currentView);
     }
 
     setupEventListeners() {
-        // Ajout de tâche
-        document.getElementById('add-task-btn').addEventListener('click', () => this.addTask());
-        const titleInput = document.getElementById('task-title');
-        titleInput.addEventListener('input', () => this.toggleAddFormExpansion());
-        titleInput.addEventListener('focus', () => this.toggleAddFormExpansion(true));
-        titleInput.addEventListener('blur', () => this.toggleAddFormExpansion());
-        titleInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.addTask();
-        });
+        // Bouton d'ajout de tâche
+        document.getElementById('add-task-btn').addEventListener('click', () => this.openModal());
         document.getElementById('view-toggle').addEventListener('click', () => this.toggleView());
 
         // Contrôles du tableau
         document.getElementById('sort-date-btn').addEventListener('click', () => this.sortTasks('date'));
         document.getElementById('sort-name-btn').addEventListener('click', () => this.sortTasks('name'));
+    }
+
+    setupModal() {
+        const modal = document.getElementById('task-modal');
+        const closeBtn = document.getElementById('modal-close');
+        const cancelBtn = document.getElementById('modal-cancel');
+        const form = document.getElementById('task-form');
+
+        closeBtn.addEventListener('click', () => this.closeModal());
+        cancelBtn.addEventListener('click', () => this.closeModal());
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.closeModal();
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveTask();
+        });
+    }
+
+    setupContextMenu() {
+        const menu = document.getElementById('context-menu');
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const card = e.target.closest('.task-card');
+            this.contextTaskId = card ? card.dataset.taskId : null;
+            document.getElementById('ctx-edit').style.display = this.contextTaskId ? 'block' : 'none';
+            const canDelete = this.contextTaskId && (this.tasks.find(t=>t.id===this.contextTaskId)?.category==='complet');
+            document.getElementById('ctx-delete').style.display = canDelete ? 'block' : 'none';
+            const mW = menu.offsetWidth || 240, mH = menu.offsetHeight || 200;
+            const x = Math.min(e.clientX, window.innerWidth - mW - 8);
+            const y = Math.min(e.clientY, window.innerHeight - mH - 8);
+            menu.style.left = x + 'px'; menu.style.top = y + 'px'; menu.style.display = 'block';
+        });
+        const hide = () => { menu.style.display = 'none'; };
+        window.addEventListener('click', hide); window.addEventListener('resize', hide); window.addEventListener('scroll', hide, true);
+        document.getElementById('ctx-new').addEventListener('click', () => this.openModal());
+        document.getElementById('ctx-edit').addEventListener('click', () => this.contextTaskId && this.openModal(this.contextTaskId));
+        document.getElementById('ctx-delete').addEventListener('click', () => this.contextTaskId && this.deleteTask(this.contextTaskId));
+        document.querySelectorAll('#context-menu [data-move]').forEach(btn=>{
+            btn.addEventListener('click', ()=> this.contextTaskId && this.moveTask(this.contextTaskId, btn.dataset.move));
+        });
+    }
+
+    setupConfirmModal() {
+        const overlay = document.getElementById('confirm-modal');
+        const close = () => overlay.classList.remove('active');
+        document.getElementById('confirm-close').addEventListener('click', close);
+        document.getElementById('confirm-cancel').addEventListener('click', close);
+        overlay.addEventListener('click', (e)=>{ if(e.target===overlay) close(); });
+        document.getElementById('confirm-delete').addEventListener('click', () => { this.performDelete(); close(); });
+    }
+
+    openModal(taskId = null) {
+        this.editingTaskId = taskId;
+        const modal = document.getElementById('task-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const form = document.getElementById('task-form');
+
+        if (taskId) {
+            const task = this.tasks.find(t => t.id === taskId);
+            modalTitle.textContent = 'Modifier la tâche';
+            document.getElementById('modal-task-title').value = task.title;
+            document.getElementById('modal-task-desc').value = task.description || '';
+            document.getElementById('modal-task-category').value = task.category;
+            document.getElementById('modal-task-priority').value = task.priority || 'none';
+        } else {
+            modalTitle.textContent = 'Nouvelle tâche';
+            form.reset();
+            document.getElementById('modal-task-category').value = 'a-lancer';
+            document.getElementById('modal-task-priority').value = 'none';
+        }
+
+        modal.classList.add('active');
+        document.getElementById('modal-task-title').focus();
+    }
+
+    closeModal() {
+        document.getElementById('task-modal').classList.remove('active');
+        this.editingTaskId = null;
+    }
+
+    saveTask() {
+        const title = document.getElementById('modal-task-title').value.trim();
+        const description = document.getElementById('modal-task-desc').value.trim();
+        const category = document.getElementById('modal-task-category').value;
+        const priority = document.getElementById('modal-task-priority').value || 'none';
+
+        if (!title) {
+            document.getElementById('modal-task-title').focus();
+            return;
+        }
+
+        if (this.editingTaskId) {
+            // Modification
+            const task = this.tasks.find(t => t.id === this.editingTaskId);
+            task.title = title;
+            task.description = description;
+            task.category = category;
+            task.priority = priority;
+        } else {
+            // Création
+            const task = {
+                id: Date.now().toString(),
+                title,
+                description,
+                category,
+                priority,
+                createdAt: new Date().toISOString()
+            };
+            this.tasks.push(task);
+        }
+
+        this.saveTasks();
+        this.renderTasks();
+        this.closeModal();
     }
 
     setupDragAndDrop() {
@@ -148,11 +265,18 @@ class TaskManager {
 
     deleteTask(taskId) {
         const task = this.tasks.find(t => t.id === taskId);
-        if (task && confirm(`Supprimer "${task.title}" ?`)) {
-            this.tasks = this.tasks.filter(t => t.id !== taskId);
-            this.saveTasks();
-            this.renderTasks();
-        }
+        if (!task) return;
+        this.pendingDeleteId = taskId;
+        document.getElementById('confirm-message').textContent = `Supprimer "${task.title}" ?`;
+        document.getElementById('confirm-modal').classList.add('active');
+    }
+
+    performDelete() {
+        if (!this.pendingDeleteId) return;
+        this.tasks = this.tasks.filter(t => t.id !== this.pendingDeleteId);
+        this.saveTasks();
+        this.renderTasks();
+        this.pendingDeleteId = null;
     }
 
     changeCategoryFromTable(taskId, newCategory) {
@@ -171,12 +295,14 @@ class TaskManager {
 
     getSortedTasks() {
         const categoryOrder = { 'complet': 0, 'a-finir': 1, 'en-cours': 2, 'a-lancer': 3 };
-        
+        const prio = this.priorityOrder;
         return [...this.tasks].sort((a, b) => {
             if (this.sortBy === 'category') {
-                const cmp = categoryOrder[a.category] - categoryOrder[b.category];
-                if (cmp === 0) return new Date(b.createdAt) - new Date(a.createdAt);
-                return cmp;
+                const c = categoryOrder[a.category] - categoryOrder[b.category];
+                if (c !== 0) return c;
+                const p = (prio[a.priority ?? 'none']) - (prio[b.priority ?? 'none']);
+                if (p !== 0) return p;
+                return new Date(b.createdAt) - new Date(a.createdAt);
             } else if (this.sortBy === 'date') {
                 const cmp = new Date(b.createdAt) - new Date(a.createdAt);
                 return this.sortOrder === 'asc' ? -cmp : cmp;
@@ -198,17 +324,19 @@ class TaskManager {
 
     renderColumnsView() {
         const categories = ['a-lancer', 'en-cours', 'a-finir', 'complet'];
-        
+        const prio = this.priorityOrder;
         categories.forEach(category => {
             const container = document.getElementById(`tasks-${category}`);
-            const categoryTasks = this.tasks.filter(task => task.category === category);
-            
+            const categoryTasks = this.tasks
+                .filter(task => task.category === category)
+                .sort((a, b) => (prio[a.priority ?? 'none']) - (prio[b.priority ?? 'none']) || (new Date(b.createdAt) - new Date(a.createdAt)));
             container.innerHTML = categoryTasks.map(task => `
                 <div class="task-card" draggable="true" data-task-id="${task.id}" data-category="${task.category}">
+                    ${task.priority && task.priority !== 'none' ? `<span class="priority-badge ${task.priority}" title="Priorité"><i class="fi fi-sr-bookmark"></i></span>` : ''}
                     <div class="task-title">${this.escapeHtml(task.title)}</div>
                     ${task.description ? `<div class="task-desc">${this.escapeHtml(task.description)}</div>` : ''}
                     <div class="task-actions">
-                        <button class="edit-btn" onclick="taskManager.editTask('${task.id}')" title="Modifier">
+                        <button class="edit-btn" onclick="taskManager.openModal('${task.id}')" title="Modifier">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -242,7 +370,10 @@ class TaskManager {
         
         tbody.innerHTML = sortedTasks.map(task => `
             <tr>
-                <td class="title-cell">${this.escapeHtml(task.title)}</td>
+                <td class="title-cell">
+                    ${task.priority && task.priority !== 'none' ? `<span class="priority-badge ${task.priority}" title="Priorité"><i class="fi fi-sr-bookmark"></i></span>` : ''}
+                    ${this.escapeHtml(task.title)}
+                </td>
                 <td class="desc-cell">${task.description ? this.escapeHtml(task.description) : ''}</td>
                 <td class="category-cell">
                     <span class="category-badge ${task.category}">${this.getCategoryLabel(task.category)}</span>
@@ -255,7 +386,7 @@ class TaskManager {
                             <option value="a-finir" ${task.category === 'a-finir' ? 'selected' : ''}>À finir</option>
                             <option value="complet" ${task.category === 'complet' ? 'selected' : ''}>Complet</option>
                         </select>
-                        <button class="icon-btn edit" onclick="taskManager.editTask('${task.id}')" title="Modifier">
+                        <button class="icon-btn edit" onclick="taskManager.openModal('${task.id}')" title="Modifier">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -323,6 +454,7 @@ class TaskManager {
             if (!t.title && t.text) { t.title = t.text; changed = true; }
             if (t.description === undefined) { t.description = ''; changed = true; }
             if (!t.createdAt) { t.createdAt = new Date().toISOString(); changed = true; }
+            if (!t.priority) { t.priority = 'none'; changed = true; }
             delete t.text;
             return t;
         });
