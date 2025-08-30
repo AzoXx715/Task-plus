@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionnaire de Tâches</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <h1>Gestionnaire de Tâches</h1>
+            <div class="add-task-section">
+                <button id="add-task-btn" class="add-task-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Nouvelle tâche
+                </button>
+            </div>
             <div class="controls">
                 <button id="view-toggle" class="toggle-btn">Mode Tableau</button>
             </div>
         </header>
 
         <main class="main-content">
-            <!-- Formulaire d'ajout -->
-            <div class="add-task-form">
-                <input type="text" id="task-title" placeholder="Titre de la tâche..." maxlength="120" aria-label="Titre de la tâche">
-                <textarea id="task-desc" placeholder="Description (optionnelle)" rows="2" maxlength="500" aria-label="Description de la tâche"></textarea>
-                <button id="add-task-btn" type="button" title="Ajouter la tâche" aria-label="Ajouter la tâche" disabled>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    <span>Ajouter</span>
-                </button>
-            </div>
-
             <!-- Mode Colonnes -->
             <div id="columns-view" class="columns-view">
                 <div class="categories">
@@ -68,7 +68,92 @@
                 </table>
             </div>
         </main>
-    </div>
+
+        <!-- Menu contextuel -->
+        <div id="context-menu" class="context-menu">
+            <button id="ctx-new">Nouvelle tâche</button>
+            <button id="ctx-edit">Modifier</button>
+            <button id="ctx-delete">Supprimer</button>
+            <div class="ctx-group">
+                <span class="ctx-label">Déplacer vers</span>
+                <div class="ctx-moves">
+                    <button data-move="a-lancer">À lancer</button>
+                    <button data-move="en-cours">En cours</button>
+                    <button data-move="a-finir">À finir</button>
+                    <button data-move="complet">Complet</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal pour ajouter/modifier une tâche -->
+        <div id="task-modal" class="modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="modal-title">Nouvelle tâche</h3>
+                    <button id="modal-close" class="icon-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="task-form">
+                    <div class="form-group">
+                        <label for="modal-task-title">Titre *</label>
+                        <input type="text" id="modal-task-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-task-desc">Description</label>
+                        <textarea id="modal-task-desc" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-task-category">Catégorie</label>
+                        <select id="modal-task-category">
+                            <option value="a-lancer">À lancer</option>
+                            <option value="en-cours">En cours</option>
+                            <option value="a-finir">À finir</option>
+                            <option value="complet">Complet</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-task-priority">Priorité</label>
+                        <select id="modal-task-priority">
+                            <option value="none">Aucune</option>
+                            <option value="low">Faible</option>
+                            <option value="medium">Moyenne</option>
+                            <option value="high">Élevée</option>
+                            <option value="urgent">Urgente</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" id="modal-cancel" class="btn-secondary">Annuler</button>
+                        <button type="submit" id="modal-save" class="btn-primary">Sauvegarder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de confirmation de suppression -->
+        <div id="confirm-modal" class="modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Confirmer la suppression</h3>
+                    <button id="confirm-close" class="icon-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <p id="confirm-message">Voulez-vous vraiment supprimer cette tâche ?</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="confirm-cancel" class="btn-secondary">Annuler</button>
+                    <button type="button" id="confirm-delete" class="btn-danger">Supprimer</button>
+                </div>
+            </div>
+        </div>
 
     <script src="script.js"></script>
 </body>
